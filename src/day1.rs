@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_part_1() {
-        let input = BufReader::new(File::open(Path::new("inputs/1/part1.txt")).unwrap());
+        let input = BufReader::new(File::open(Path::new("inputs/1/input.txt")).unwrap());
         let mut lines = input.lines().map(Result::unwrap);
         let answer = DayOne::part1(&mut lines).unwrap();
         assert_eq!(answer, 974304);
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_part_2() {
-        let input = BufReader::new(File::open(Path::new("inputs/1/part1.txt")).unwrap());
+        let input = BufReader::new(File::open(Path::new("inputs/1/input.txt")).unwrap());
         let mut lines = input.lines().map(Result::unwrap);
         let answer = DayOne::part2(&mut lines).unwrap();
         assert_eq!(answer, 236430480);
