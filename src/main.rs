@@ -1,51 +1,53 @@
-use std::path::Path;
-
 mod day1;
+mod traits;
+mod util;
 
-fn load_day_input(path: &Path) -> Result<String, Error> {
-    std::fs::read_to_string(path).map_err(
-        |_| Error::InputError(format!("Couldn't load input at {}", path.to_str().unwrap()))
-    )
-}
+use crate::traits::Solution;
+use anyhow::anyhow;
+use anyhow::Result;
+use std::{fs::File, io::prelude::*, io::BufReader, path::Path};
 
-#[derive(Debug)]
-enum Error {
-    SolutionError(i32),
-    InputError(String),
-}
-
-fn main() -> Result<(), Error> {
+fn main() -> Result<()> {
     // TODO: parse a number from cli args
     let path_str = std::env::args()
         .nth(1)
-        .ok_or(Error::InputError("No path given".to_string()))?;
+        .ok_or(anyhow!("No path given".to_string()))?;
 
     // open that day's input
     let path = Path::new(path_str.as_str());
-    let input = load_day_input(path)?;
+    let input = BufReader::new(File::open(path)?);
 
     // fuck
     let day_dir = path
-    .parent()
-    .unwrap()
-    .iter()
-    .last().unwrap().to_str().unwrap();
+        .parent()
+        .unwrap()
+        .iter()
+        .last()
+        .unwrap()
+        .to_str()
+        .unwrap();
 
     let day = day_dir.parse::<i32>().expect("Failed to parse day");
 
     println!("Running solution for day {}", day);
 
+    let lines: Vec<String> = input.lines().map(Result::unwrap).collect();
+    let mut iterator = lines.into_iter();
+    let mut iterator2 = iterator.clone();
     // feed it to the solution
     match day {
         1 => {
-            day1::part1(input.as_str());
-            todo!("part 2");
-        },
+            let solution = day1::DayOne::part1(&mut iterator)?;
+            println!("Part 1: {}", solution);
+            let solution2 = day1::DayOne::part2(&mut iterator2)?;
+            println!("Part 2: {}", solution2);
+            // todo!()
+        }
         _ => {
             println!("Day {} is not implemented", day);
             std::process::exit(1);
         }
-    }
+    };
 
     Ok(())
 }
