@@ -2,46 +2,130 @@
 use crate::traits::Solution;
 use anyhow::anyhow;
 use anyhow::{Context, Result};
+use regex::{Captures, Regex};
 use std::collections::HashSet;
-use regex::Regex;
-
-#[macro_use]
-extern crate lazy_static;
+use std::ops::Deref;
 
 pub struct DayTwo {}
+
+#[derive(Debug)]
+struct Password<'a>(&'a str);
+
+impl<'a> Password<'a> {
+    pub fn new(line: &'a str) -> Result<Self> {
+        // parse it out of the line
+        lazy_static! {
+            static ref RE: Regex = Regex::new(": (\\w+)").unwrap();
+        }
+
+        let pw = RE
+            .captures(line)
+            .ok_or(anyhow!("No matches"))?
+            .get(0)
+            .ok_or(anyhow!("Failed to match password"))?
+            .as_str();
+
+        Ok(Self { 0: &pw })
+    }
+}
+
+impl<'a> Deref for Password<'a> {
+    type Target = &'a str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 struct Policy {
     lower_bound: u32,
     upper_bound: u32,
-    character: char
+    character: char,
 }
 
-
+/// The password policy
 impl Policy {
     // Parses n-n char from the string
-    pub fn new(str: &str) -> Self {
+    pub fn new(string: &str) -> Result<Self> {
         // use regex to get the lower/upper bounds and character
         lazy_static! { // compile only once
             static ref RE: Regex = Regex::new("(\\d+)-(\\d+) (\\w)").unwrap();
         }
 
-        let captures = RE.captures()
-        Self {
+        let captures: Captures = RE
+            .captures(string)
+            .ok_or(anyhow!("No capture groups found"))?;
 
+        let char_capture = captures
+            .get(3)
+            .ok_or(anyhow!("Unable to capture target character"))?
+            .as_str();
+        if char_capture.chars().count() > 1 {
+            return Err(anyhow!("Too many characters in match (must be one)"));
         }
+
+        let lower_str = captures
+            .get(1)
+            .ok_or(anyhow!("Unable to capture lower bound"))?
+            .as_str();
+
+        let upper_str = captures
+            .get(2)
+            .ok_or(anyhow!("Unable to capture upper bound"))?
+            .as_str();
+
+        Ok(Self {
+            lower_bound: lower_str
+                .parse::<u32>()
+                .context(format!("Failed to parse {} as u32", lower_str))?,
+            upper_bound: upper_str
+                .parse()
+                .context(format!("Failed to parse {} as u32", upper_str))?,
+            character: char_capture
+                .chars()
+                .nth(0)
+                .ok_or(anyhow!("characters is empty"))?,
+        })
+    }
+
+    pub fn is_valid(&self, pw: &Password) -> bool {
+        let mut occurrences = 0;
+
+        // the char must occur between lower and upper times in the password
+        for char in pw.chars() {
+            if char == self.character {
+                occurrences += 1;
+            }
+
+            if occurrences > self.upper_bound {
+                return false;
+            }
+        }
+
+        occurrences > self.lower_bound
     }
 }
 
 impl Solution for DayTwo {
     /// How many passwords are valid, given each line's password policy?
     fn part1(input: &mut impl Iterator<Item = String>) -> Result<i32> {
+        let mut valid_passwords = 0;
+
         for line in input {
             // format: 1-3 a: <password> is: 'a' must occur between 1-3 times in the password
-
             // step 1: parse the policy
+            let policy = Policy::new(line.as_str())?;
+
+            // step 2: parse the password
+            let pw = Password::new(line.as_str())?;
 
             // step 2: check the pw
+            if policy.is_valid(&pw) {
+                valid_passwords += 1;
+            }
         }
+
+        Ok(valid_passwords)
     }
 
     fn part2(input: &mut impl Iterator<Item = String>) -> Result<i32> {
