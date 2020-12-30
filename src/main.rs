@@ -1,3 +1,5 @@
+#![feature(option_result_contains)]
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -45,7 +47,12 @@ fn main() -> Result<()> {
             println!("Part 1: {}", solution);
             let solution2 = day1::DayOne::part2(&mut iterator2)?;
             println!("Part 2: {}", solution2);
-            // todo!()
+        }
+        2 => {
+            let solution = day2::DayTwo::part1(&mut iterator)?;
+            println!("Part 1: {}", solution);
+            let solution2 = day2::DayTwo::part2(&mut iterator2)?;
+            println!("Part 2: {}", solution2);
         }
         _ => {
             println!("Day {} is not implemented", day);

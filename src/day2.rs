@@ -21,7 +21,7 @@ impl<'a> Password<'a> {
         let pw = RE
             .captures(line)
             .ok_or(anyhow!("No matches"))?
-            .get(0)
+            .get(1)
             .ok_or(anyhow!("Failed to match password"))?
             .as_str();
 
@@ -102,7 +102,7 @@ impl Policy {
             }
         }
 
-        occurrences > self.lower_bound
+        occurrences >= self.lower_bound
     }
 }
 
@@ -128,8 +128,90 @@ impl Solution for DayTwo {
         Ok(valid_passwords)
     }
 
+    /// The policy actually is positional - first digit is where to expect the
+    /// character, second digit is where to _not_ expect it.
     fn part2(input: &mut impl Iterator<Item = String>) -> Result<i32> {
-        todo!()
+        let mut valid_passwords = 0;
+
+        for line in input {
+            // step 1: parse the policy
+            let policy = PartTwoPolicy::new(line.as_str())?;
+
+            // step 2: parse the password
+            let pw = Password::new(line.as_str())?;
+
+            // step 2: check the pw
+            if policy.is_valid(&pw) {
+                valid_passwords += 1;
+            }
+        }
+
+        Ok(valid_passwords)
+    }
+}
+
+struct PartTwoPolicy {
+    should_be_at_index: usize,
+    should_not_be_at_index: usize,
+    character: char,
+}
+
+impl PartTwoPolicy {
+    // Parses n-n char from the string
+    pub fn new(string: &str) -> Result<Self> {
+        // use regex to get the lower/upper bounds and character
+        lazy_static! { // compile only once
+            static ref RE: Regex = Regex::new("(\\d+)-(\\d+) (\\w)").unwrap();
+        }
+
+        let captures: Captures = RE
+            .captures(string)
+            .ok_or(anyhow!("No capture groups found"))?;
+
+        let char_capture = captures
+            .get(3)
+            .ok_or(anyhow!("Unable to capture target character"))?
+            .as_str();
+        if char_capture.chars().count() > 1 {
+            return Err(anyhow!("Too many characters in match (must be one)"));
+        }
+
+        let should_str = captures
+            .get(1)
+            .ok_or(anyhow!("Unable to capture lower bound"))?
+            .as_str();
+
+        let should_not_str = captures
+            .get(2)
+            .ok_or(anyhow!("Unable to capture upper bound"))?
+            .as_str();
+
+        Ok(Self {
+            should_be_at_index: should_str
+                .parse()
+                .context(format!("Failed to parse {} as usize", should_str))?,
+            should_not_be_at_index: should_not_str
+                .parse()
+                .context(format!("Failed to parse {} as usize", should_not_str))?,
+            character: char_capture
+                .chars()
+                .nth(0)
+                .ok_or(anyhow!("characters is empty"))?,
+        })
+    }
+
+    pub fn is_valid(&self, pw: &Password) -> bool {
+        let mut occurrences = 0;
+
+        let chars: Vec<char> = pw.chars().collect();
+
+        for index in vec![self.should_be_at_index, self.should_not_be_at_index] {
+            if chars.get(index - 1).copied().contains(&self.character) {
+                occurrences += 1;
+            }
+        }
+
+        occurrences == 1
     }
 }
 
@@ -158,8 +240,8 @@ mod tests {
         let answer = DayTwo::part1(&mut iterator).unwrap();
         assert_eq!(answer, 2);
 
-        // let p2 = DayTwo::part2(&mut iterator2).unwrap();
-        // assert_eq!(p2, 241861950);
+        let p2 = DayTwo::part2(&mut iterator2).unwrap();
+        assert_eq!(p2, 1);
     }
 
     #[test]
@@ -167,7 +249,7 @@ mod tests {
         let input = BufReader::new(File::open(Path::new("inputs/2/input.txt")).unwrap());
         let mut lines = input.lines().map(Result::unwrap);
         let answer = DayTwo::part1(&mut lines).unwrap();
-        // assert_eq!(answer, 974304);
+        assert_eq!(answer, 506);
     }
 
     #[test]
@@ -175,6 +257,6 @@ mod tests {
         let input = BufReader::new(File::open(Path::new("inputs/2/input.txt")).unwrap());
         let mut lines = input.lines().map(Result::unwrap);
         let answer = DayTwo::part2(&mut lines).unwrap();
-        // assert_eq!(answer, 236430480);
+        assert_eq!(answer, 443);
     }
 }
